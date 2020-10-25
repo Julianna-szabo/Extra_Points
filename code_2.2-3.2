@@ -1,0 +1,79 @@
+rm(list=ls())
+
+library(tidyverse)
+
+# Load the data into R
+my_path <- "/Users/Terez/OneDrive - Central European University/Data_Analysis_01/Extra Points/"
+ff <- read_csv( paste0 (my_path ,"raw/fordfocus.csv"))
+
+# Check what it looks like
+glimpse(ff)
+
+# After the glimpse it is clear that I do not need the first five columns. They only contain information
+# about the scraping path.
+# Also there seem to be some problem with the mileage which we will check later.
+
+ff$`web-scraper-order` <- NULL
+ff$`web-scraper-start-url` <- NULL
+ff$page_numbers <- NULL
+ff$`page_numbers-href` <- NULL
+ff$product_selector <- NULL
+ff$`product_selector-href` <- NULL
+
+# The first column comtaines more than just the name so I will split it into multiple columns
+
+ff <- ff %>% separate(name, into = c('year_made', 'make', 'model', 'specifics'), sep = " ")
+
+# The price column includes the $ sign which I will drop
+
+ff <- ff %>% separate(price, into = c('trash', 'price'), sep = "[^0-9\\,]")
+ff$trash <- NULL
+
+# Let's go back to the mileage column. It looks like there are more error values than useful values.
+# I have decided to discard this column. While that could be useful information, I will aim my
+# guestions more at a corelation with the age of the car, so they are not as relevant.
+# If at a later point in time there is an easy way to clean these values it would be great to do that.
+
+ff$mileage <- NULL
+
+# Some of these columns should be numbers so I will convert them
+
+ff$year_made <- as.numeric(ff$year_made)
+ff$price <- as.numeric(ff$price)
+ff$city_mpg <- as.numeric(ff$city_mpg)
+ff$highway_mpg <- as.numeric(ff$highway_mpg)
+  
+# The price was not working since the coma was not recognized by the numeric function, so I converted into a dot
+
+ff$price <- scan(text=ff$price, dec=".", sep=".")
+
+# Now it will run and the price will be in thousand $
+
+ff$price <- as.numeric(ff$price)
+
+# The next step would be to remove columns that have extreme values for highway_mpg
+
+ff <- ff %>% 
+  filter(highway_mpg < 100)
+
+
+
+###### Code for 3.2 
+
+ff %>% 
+  group_by(year_made) %>% 
+  ggplot(aes(x= year_made))+
+  geom_bar()+
+  labs(y= 'Number of cars', y= 'Year the car was made')
+
+
+ggplot(ff, aes(x=price))+
+  geom_histogram(bins = 10)+
+  labs(y= 'Number of cars', y= 'Price of car( in 000$')
+
+# Most cars being sold are less then 10 years old and cars 3 years old are especially popular.
+# In terms of price the most cars are around 5'000 or 15'000 dollars which may be connected the year distribution.
+# There are no more extreme values since they have been removed during the cleaning process, although maybe
+# the price of 20'000 could be an outlier.
+
+
